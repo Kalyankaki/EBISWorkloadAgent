@@ -15,7 +15,7 @@ import { ProcessScorecard } from "@/components/workload/ProcessScorecard";
 import { useWvi } from "@/store/useWvi";
 import { getWorkload } from "@/data/workloads";
 import { getScenarioState } from "@/data/scenarios";
-import { rollupHealth, processesAtRisk, conformancePct } from "@/lib/health";
+import { workloadOverallHealth, processesAtRisk, conformancePct } from "@/lib/health";
 import { formatUsd } from "@/lib/format";
 import { ARCHETYPES } from "@/data/archetypes";
 import { motion } from "framer-motion";
@@ -23,10 +23,10 @@ import { motion } from "framer-motion";
 export default function OverviewPage() {
   const stepId = useWvi((s) => s.stepId);
   const workloadId = useWvi((s) => s.currentWorkloadId);
-  const workload = getWorkload(workloadId);
+  const workload = getWorkload(workloadId)!;
   const state = getScenarioState(workloadId, stepId);
 
-  const health = rollupHealth(workload, state);
+  const health = workloadOverallHealth(workload, state.signals);
   const par = processesAtRisk(workload, state);
   const conformance = conformancePct(workload);
   const arche = ARCHETYPES[workload.archetype.id];

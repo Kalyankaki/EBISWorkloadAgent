@@ -3,14 +3,14 @@
 import { Layers, Sparkles, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { Pill, HealthPill } from "@/components/primitives/Pill";
 import type { Workload } from "@/data/schema";
-import { rollupHealth } from "@/lib/health";
+import { workloadOverallHealth } from "@/lib/health";
 import { getScenarioState } from "@/data/scenarios";
 import { useWvi } from "@/store/useWvi";
 
 export function WorkloadHeader({ workload }: { workload: Workload }) {
   const stepId = useWvi((s) => s.stepId);
   const state = getScenarioState(workload.id, stepId);
-  const health = rollupHealth(workload, state);
+  const health = workloadOverallHealth(workload, state.signals);
   const archetypeStale =
     workload.archetypeVersionApplied !== workload.archetype.latestVersion;
 

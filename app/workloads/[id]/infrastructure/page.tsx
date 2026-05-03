@@ -27,7 +27,7 @@ import type { DriftItem, InfrastructureResource } from "@/data/schema";
 export default function InfraIQPage() {
   const stepId = useWvi((s) => s.stepId);
   const workloadId = useWvi((s) => s.currentWorkloadId);
-  const workload = getWorkload(workloadId);
+  const workload = getWorkload(workloadId)!;
   const state = getScenarioState(workloadId, stepId);
   const drift = getDriftFor(workloadId);
   const arche = ARCHETYPES[workload.archetype.id];

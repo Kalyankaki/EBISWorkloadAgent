@@ -11,35 +11,38 @@ import { formatUsd } from "@/lib/format";
 
 // Synthesize cost-per-process numbers (in $/mo). These mirror what FinOps lens shows.
 const PROCESS_COST_USD: Record<string, number> = {
-  "p-gl-close": 18_000,
-  "p-o2c": 61_000,
-  "p-p2p": 42_000,
-  "p-ap-import": 11_000,
-  "p-inv": 27_000,
-  "p-hr-payroll": 14_000,
-  "p-financial-close": 14_400,
+  "gl-close": 18_000,
+  "o2c": 61_000,
+  "p2p": 42_000,
+  "ap-val": 11_000,
+  "mrp": 27_000,
+  "cm-batch": 6_000,
+  "payroll": 14_000,
+  "fin-report": 14_400,
 };
 
 // And per-infra cost (rough breakdown)
 const INFRA_COST_USD: Record<string, number> = {
-  "i-odba-rac": 86_000,
-  "i-odba-dg": 22_000,
-  "i-stg-redo": 8_000,
-  "i-vmss-apps": 41_000,
-  "i-vnet": 6_000,
-  "i-er": 10_000,
-  "i-kv": 1_400,
-  "i-monitor": 3_500,
-  "i-defender": 3_000,
-  "i-fabric": 5_000,
-  "i-nsg-db": 0,
-  "i-entra": 0,
-  "i-untagged": 1_500,
+  "odba-rac": 86_000,
+  "odba-dg": 22_000,
+  "stg-redo": 8_000,
+  "vm-apps-1": 21_000,
+  "vm-apps-2": 20_000,
+  "vm-cm": 18_000,
+  "lb": 800,
+  "vnet": 6_000,
+  "er": 10_000,
+  "kv": 1_400,
+  "monitor": 3_500,
+  "defender": 3_000,
+  "fabric": 5_000,
+  "nsg-db": 0,
+  "entra": 0,
 };
 
 export default function CostMapPage() {
   const workloadId = useWvi((s) => s.currentWorkloadId);
-  const workload = getWorkload(workloadId);
+  const workload = getWorkload(workloadId)!;
   const recs = getRecommendationsFor(workloadId).filter(
     (r) => r.estimatedCostDeltaUsdPerMonth != null && r.estimatedCostDeltaUsdPerMonth < 0
   );

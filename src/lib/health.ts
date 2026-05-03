@@ -1,32 +1,85 @@
-import type { HealthStatus, ScenarioState, Workload } from "@/data/schema";
+import type {
+  ComponentId,
+  HealthStatus,
+  ScenarioState,
+  SignalSnapshot,
+  Workload,
+} from "@/data/schema";
+import { reverseDependencies } from "./propagation";
 
-const order: HealthStatus[] = ["unknown", "healthy", "warning", "critical"];
+const ORDER: HealthStatus[] = ["unknown", "healthy", "warning", "critical"];
+
+// Worst-wins rollup of an arbitrary list of statuses.
+export function rollupHealth(statuses: HealthStatus[]): HealthStatus {
+  if (statuses.length === 0) return "unknown";
+  let worst: HealthStatus = "healthy";
+  for (const s of statuses) {
+    if (ORDER.indexOf(s) > ORDER.indexOf(worst)) worst = s;
+  }
+  return worst;
+}
 
 export function worse(a: HealthStatus, b: HealthStatus): HealthStatus {
-  return order.indexOf(a) > order.indexOf(b) ? a : b;
+  return ORDER.indexOf(a) > ORDER.indexOf(b) ? a : b;
 }
 
-export function rollupHealth(workload: Workload, state: ScenarioState): HealthStatus {
-  let h: HealthStatus = "healthy";
-  for (const id of Object.keys(state.signals)) {
-    h = worse(h, state.signals[id]?.health ?? "unknown");
-  }
-  return h;
+// Workload-wide health = worst across all process healths.
+export function workloadOverallHealth(
+  workload: Workload,
+  signals: SignalSnapshot
+): HealthStatus {
+  return rollupHealth(
+    workload.processes.map((p) => processHealth(workload, p.id, signals))
+  );
 }
 
-export function processesAtRisk(workload: Workload, state: ScenarioState): number {
+// Process health = worst of (the process's own signal) ∪ (rollup of every component it depends on).
+export function processHealth(
+  workload: Workload,
+  processId: ComponentId,
+  signals: SignalSnapshot
+): HealthStatus {
+  const direct = signals[processId]?.health ?? "healthy";
+  const deps = reverseDependencies(workload, processId);
+  const depHealths = deps.map((id) => signals[id]?.health ?? "healthy");
+  return rollupHealth([direct, ...depHealths]);
+}
+
+export function HEALTH_LABEL(s: HealthStatus): string {
+  return s === "healthy"
+    ? "Healthy"
+    : s === "warning"
+    ? "Warning"
+    : s === "critical"
+    ? "Critical"
+    : "Unknown";
+}
+
+export function HEALTH_COLOR(s: HealthStatus): string {
+  return s === "healthy"
+    ? "#5db85d"
+    : s === "warning"
+    ? "#f0a020"
+    : s === "critical"
+    ? "#e35454"
+    : "#a19f9d";
+}
+
+// Convenience used by Phase 3+ pages.
+export function processesAtRisk(
+  workload: Workload,
+  state: ScenarioState
+): number {
   return workload.processes.filter((p) => {
-    const sig = state.signals[p.id];
-    return sig?.health === "warning" || sig?.health === "critical";
+    const h = processHealth(workload, p.id, state.signals);
+    return h === "warning" || h === "critical";
   }).length;
 }
 
 export function conformancePct(workload: Workload): number {
-  const items = [
-    ...workload.applicationComponents,
-    ...workload.infrastructureResources,
-  ];
-  const matching = workload.infrastructureResources.filter((r) => r.matchesReference).length;
-  const totalInfra = workload.infrastructureResources.length;
-  return Math.round((matching / Math.max(1, totalInfra)) * 100);
+  const matching = workload.infrastructureResources.filter(
+    (r) => r.matchesReference
+  ).length;
+  const total = workload.infrastructureResources.length;
+  return Math.round((matching / Math.max(1, total)) * 100);
 }

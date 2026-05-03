@@ -12,7 +12,7 @@ export function CausalChainPreview() {
   const stepId = useWvi((s) => s.stepId);
   const workloadId = useWvi((s) => s.currentWorkloadId);
   const incident = getIncidentFor(workloadId, stepId);
-  const workload = getWorkload(workloadId);
+  const workload = getWorkload(workloadId)!;
 
   if (!incident) return null;
 

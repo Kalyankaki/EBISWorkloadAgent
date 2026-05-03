@@ -10,7 +10,7 @@ import { formatRevenueAtRisk } from "@/lib/format";
 export function ProcessScorecard() {
   const stepId = useWvi((s) => s.stepId);
   const workloadId = useWvi((s) => s.currentWorkloadId);
-  const workload = getWorkload(workloadId);
+  const workload = getWorkload(workloadId)!;
   const state = getScenarioState(workloadId, stepId);
 
   return (

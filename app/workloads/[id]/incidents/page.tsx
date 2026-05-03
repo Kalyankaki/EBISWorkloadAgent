@@ -21,7 +21,7 @@ import { personaById } from "@/data/personas";
 export default function IncidentsPage() {
   const stepId = useWvi((s) => s.stepId);
   const workloadId = useWvi((s) => s.currentWorkloadId);
-  const workload = getWorkload(workloadId);
+  const workload = getWorkload(workloadId)!;
   const incident = getIncidentFor(workloadId, stepId);
 
   if (!incident) {

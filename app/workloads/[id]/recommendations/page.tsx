@@ -17,7 +17,7 @@ const SEVERITY_RANK = { critical: 0, high: 1, medium: 2, low: 3 } as const;
 export default function RecommendationsPage() {
   const stepId = useWvi((s) => s.stepId);
   const workloadId = useWvi((s) => s.currentWorkloadId);
-  const workload = getWorkload(workloadId);
+  const workload = getWorkload(workloadId)!;
   const all = getRecommendationsFor(workloadId);
 
   const [severityFilter, setSeverityFilter] = useState<string>("all");

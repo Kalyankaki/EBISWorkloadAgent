@@ -9,8 +9,8 @@ import { blastRadius, findComponent } from "@/lib/propagation";
 import { formatRevenueAtRisk } from "@/lib/format";
 
 export function PropagationCards({ workload }: { workload: Workload }) {
-  const [forwardSeed, setForwardSeed] = useState<ComponentId>("i-stg-redo");
-  const [reverseSeed, setReverseSeed] = useState<ComponentId>("p-gl-close");
+  const [forwardSeed, setForwardSeed] = useState<ComponentId>("stg-redo");
+  const [reverseSeed, setReverseSeed] = useState<ComponentId>("gl-close");
 
   const forwardBlast = blastRadius(workload, forwardSeed);
   const reverseBlast = blastRadius(workload, reverseSeed);

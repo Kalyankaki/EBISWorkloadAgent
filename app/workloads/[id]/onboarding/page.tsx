@@ -38,7 +38,7 @@ const ARCHETYPES_GALLERY = [
 
 export default function OnboardingPage() {
   const workloadId = useWvi((s) => s.currentWorkloadId);
-  const workload = getWorkload(workloadId);
+  const workload = getWorkload(workloadId)!;
   const completed = workload.onboardingProgress.stepsComplete;
   const [activeStep, setActiveStep] = useState<number>(completed + 1);
 

@@ -223,14 +223,24 @@ export interface Persona {
   iconKey: string;
   tagline: string;
   primaryTabs: string[];
+  lensFn: PersonaLensFn;
 }
 
 export interface PersonaPanelItem {
+  tone: "critical" | "warn" | "good" | "info";
   title: string;
   body: string;
-  tone: "info" | "good" | "warn" | "bad";
+  metric?: string;
+  metricSub?: string;
   cta?: string;
+  target?: string; // tab id to navigate to on click
 }
+
+export type PersonaLensFn = (
+  workload: Workload,
+  scenario: ScenarioState,
+  allRecs: Recommendation[]
+) => PersonaPanelItem[];
 
 // ============================================================
 // SCENARIO

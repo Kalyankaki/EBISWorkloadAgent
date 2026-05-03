@@ -12,7 +12,7 @@ import { getScenarioState } from "@/data/scenarios";
 export function TopologyPreview() {
   const stepId = useWvi((s) => s.stepId);
   const workloadId = useWvi((s) => s.currentWorkloadId);
-  const workload = getWorkload(workloadId);
+  const workload = getWorkload(workloadId)!;
   const state = getScenarioState(workloadId, stepId);
 
   const lanes: { label: string; items: { id: string; name: string }[] }[] = [

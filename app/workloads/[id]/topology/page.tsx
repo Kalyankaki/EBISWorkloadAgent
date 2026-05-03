@@ -9,7 +9,7 @@ import { getWorkload } from "@/data/workloads";
 
 export default function TopologyPage() {
   const workloadId = useWvi((s) => s.currentWorkloadId);
-  const workload = getWorkload(workloadId);
+  const workload = getWorkload(workloadId)!;
 
   return (
     <motion.div

@@ -1,22 +1,32 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { ChevronRight } from "lucide-react";
 import { Card } from "@/components/primitives/Card";
 import { Pill } from "@/components/primitives/Pill";
 import { useWvi } from "@/store/useWvi";
 import { personaById, personaLens } from "@/data/personas";
-import { getWorkload } from "@/data/workloads";
+import { getRecommendationsFor, getWorkload } from "@/data/workloads";
 import { getScenarioState } from "@/data/scenarios";
+import type { PersonaPanelItem } from "@/data/schema";
 
 export function PersonaLensPanel() {
+  const router = useRouter();
   const persona = useWvi((s) => s.persona);
   const stepId = useWvi((s) => s.stepId);
   const workloadId = useWvi((s) => s.currentWorkloadId);
 
   const personaObj = personaById(persona);
-  const workload = getWorkload(workloadId);
+  const workload = getWorkload(workloadId)!;
   const state = getScenarioState(workloadId, stepId);
-  const items = personaLens(persona, workload, state);
+  const recs = getRecommendationsFor(workloadId);
+  const items = personaLens(persona, workload, state, recs);
+
+  const navigate = (target?: string) => {
+    if (!target) return;
+    const path = target === "overview" ? "" : `/${target}`;
+    router.push(`/workloads/${workloadId}${path}`);
+  };
 
   return (
     <Card
@@ -38,7 +48,7 @@ export function PersonaLensPanel() {
       }
     >
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-        {items.map((it, i) => {
+        {items.map((it: PersonaPanelItem, i) => {
           const tone = it.tone;
           return (
             <div
@@ -52,7 +62,7 @@ export function PersonaLensPanel() {
                       ? "good"
                       : tone === "warn"
                       ? "warn"
-                      : tone === "bad"
+                      : tone === "critical"
                       ? "bad"
                       : "info"
                   }
@@ -62,7 +72,7 @@ export function PersonaLensPanel() {
                     ? "OK"
                     : tone === "warn"
                     ? "Watch"
-                    : tone === "bad"
+                    : tone === "critical"
                     ? "Action"
                     : "Info"}
                 </Pill>
@@ -70,11 +80,24 @@ export function PersonaLensPanel() {
                   {it.title}
                 </div>
               </div>
+              {it.metric && (
+                <div className="text-[20px] font-light text-ax-text leading-none">
+                  {it.metric}
+                  {it.metricSub && (
+                    <span className="text-[11px] text-ax-textMute ml-2">
+                      {it.metricSub}
+                    </span>
+                  )}
+                </div>
+              )}
               <div className="text-[12px] text-ax-textDim leading-relaxed">
                 {it.body}
               </div>
               {it.cta && (
-                <button className="self-start mt-1 inline-flex items-center gap-1 text-[11px] text-ax-accent hover:text-white">
+                <button
+                  onClick={() => navigate(it.target)}
+                  className="self-start mt-1 inline-flex items-center gap-1 text-[11px] text-ax-accent hover:text-white"
+                >
                   {it.cta} <ChevronRight size={11} />
                 </button>
               )}

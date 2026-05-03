@@ -18,7 +18,7 @@ export function CopilotPanel() {
 
   const [draft, setDraft] = useState("");
   const turns = COPILOT_TURNS[stepId];
-  const workload = getWorkload(workloadId);
+  const workload = getWorkload(workloadId)!;
   const personaObj = personaById(persona);
 
   return (

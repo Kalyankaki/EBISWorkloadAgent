@@ -8,14 +8,16 @@ import type {
   Recommendation,
   Workload,
 } from "../schema";
+import { DEMO_NOW, daysAgo, hoursAgo } from "../demoNow";
 
 // ============================================================
-// BUSINESS PROCESSES
+// BUSINESS PROCESSES (8)
 // ============================================================
+// Required IDs (Phase 2 validation): gl-close, ap-val, mrp, cm-batch
 
 const processes: BusinessProcess[] = [
   {
-    id: "p-gl-close",
+    id: "gl-close",
     layer: "process",
     name: "GL Period Close",
     ebsModule: "GL",
@@ -26,7 +28,7 @@ const processes: BusinessProcess[] = [
     tags: ["close", "monthly", "finance", "tier-1"],
   },
   {
-    id: "p-o2c",
+    id: "o2c",
     layer: "process",
     name: "Order-to-Cash",
     ebsModule: "OM/AR",
@@ -37,7 +39,7 @@ const processes: BusinessProcess[] = [
     tags: ["o2c", "revenue", "tier-1"],
   },
   {
-    id: "p-p2p",
+    id: "p2p",
     layer: "process",
     name: "Procure-to-Pay",
     ebsModule: "PO/AP",
@@ -48,29 +50,40 @@ const processes: BusinessProcess[] = [
     tags: ["p2p", "operations", "tier-2"],
   },
   {
-    id: "p-ap-import",
+    id: "ap-val",
     layer: "process",
-    name: "AP Invoice Import",
+    name: "AP Invoice Validation",
     ebsModule: "AP",
     ownerOrg: "Finance",
     criticality: "High",
     revenueAtRisk: { value: 32_000, unit: "USD/day" },
-    slo: "Process 5,000 invoices/hr · < 30 min lag",
+    slo: "Validate 5,000 invoices/hr · < 30 min lag",
     tags: ["ap", "finance", "tier-2"],
   },
   {
-    id: "p-inv",
+    id: "mrp",
     layer: "process",
-    name: "Inventory Replenishment",
+    name: "Material Requirements Planning",
     ebsModule: "INV",
     ownerOrg: "Supply Chain",
     criticality: "Medium",
     revenueAtRisk: { value: 0, unit: "compliance" },
     slo: "Nightly batch within 4h window",
-    tags: ["inv", "supply-chain", "tier-3"],
+    tags: ["mrp", "supply-chain", "tier-3"],
   },
   {
-    id: "p-hr-payroll",
+    id: "cm-batch",
+    layer: "process",
+    name: "Concurrent Manager Batch (ad-hoc)",
+    ebsModule: "CM",
+    ownerOrg: "EBS Platform",
+    criticality: "Medium",
+    revenueAtRisk: { value: 0, unit: "foundation" },
+    slo: "Throughput 4,200 reports/hr · queue depth < 500",
+    tags: ["cm", "batch", "platform"],
+  },
+  {
+    id: "payroll",
     layer: "process",
     name: "Payroll Run",
     ebsModule: "HR",
@@ -81,7 +94,7 @@ const processes: BusinessProcess[] = [
     tags: ["payroll", "hr", "tier-1", "compliance"],
   },
   {
-    id: "p-financial-close",
+    id: "fin-report",
     layer: "process",
     name: "Financial Reporting",
     ebsModule: "GL/Hyperion",
@@ -94,16 +107,18 @@ const processes: BusinessProcess[] = [
 ];
 
 // ============================================================
-// APPLICATION COMPONENTS
+// APPLICATION COMPONENTS (13)
 // ============================================================
+// Required IDs (validation): gl, cm, wf
 
 const applicationComponents: ApplicationComponent[] = [
   {
-    id: "a-cm",
+    id: "cm",
     layer: "application",
     name: "Concurrent Manager",
     kind: "ebs-runtime",
-    description: "EBS batch scheduler that runs concurrent programs (reports, interfaces, period close batches).",
+    description:
+      "EBS batch scheduler that runs concurrent programs (reports, interfaces, period close batches).",
     runtimeProperties: {
       Workers: "32",
       "Queue depth (baseline)": "320",
@@ -113,11 +128,25 @@ const applicationComponents: ApplicationComponent[] = [
     },
   },
   {
-    id: "a-forms",
+    id: "wf",
+    layer: "application",
+    name: "Workflow Engine",
+    kind: "ebs-runtime",
+    description:
+      "Oracle Workflow / Notification Mailer. Runs background processes for approvals, notifications, deferred routing.",
+    runtimeProperties: {
+      "Background engines": "4",
+      "Notifications/hr": "9,400",
+      "Deferred queue baseline": "120",
+    },
+  },
+  {
+    id: "forms",
     layer: "application",
     name: "Forms / Self-Service",
     kind: "ebs-runtime",
-    description: "Oracle Forms server and self-service web tier for end-user transactions.",
+    description:
+      "Oracle Forms server and self-service web tier for end-user transactions.",
     runtimeProperties: {
       "Form sessions (peak)": "1,800",
       "OAF sessions": "4,200",
@@ -125,7 +154,7 @@ const applicationComponents: ApplicationComponent[] = [
     },
   },
   {
-    id: "a-gl",
+    id: "gl",
     layer: "application",
     name: "GL (General Ledger)",
     kind: "ebs-module",
@@ -136,77 +165,65 @@ const applicationComponents: ApplicationComponent[] = [
     },
   },
   {
-    id: "a-ap",
+    id: "ap",
     layer: "application",
     name: "AP (Payables)",
     kind: "ebs-module",
     description: "Invoice import, validation, payment, expense reports.",
-    runtimeProperties: {
-      "Avg invoices/day": "12,400",
-    },
+    runtimeProperties: { "Avg invoices/day": "12,400" },
   },
   {
-    id: "a-ar",
+    id: "ar",
     layer: "application",
     name: "AR (Receivables)",
     kind: "ebs-module",
     description: "Customer invoicing, collections, cash application.",
-    runtimeProperties: {
-      "Avg invoices/day": "8,800",
-    },
+    runtimeProperties: { "Avg invoices/day": "8,800" },
   },
   {
-    id: "a-om",
+    id: "om",
     layer: "application",
     name: "OM (Order Management)",
     kind: "ebs-module",
     description: "Order entry, fulfillment, returns.",
-    runtimeProperties: {
-      "Avg orders/day": "22,100",
-    },
+    runtimeProperties: { "Avg orders/day": "22,100" },
   },
   {
-    id: "a-po",
+    id: "po",
     layer: "application",
     name: "PO (Purchasing)",
     kind: "ebs-module",
   },
   {
-    id: "a-inv",
+    id: "inv",
     layer: "application",
     name: "INV (Inventory)",
     kind: "ebs-module",
   },
   {
-    id: "a-hr",
+    id: "hr",
     layer: "application",
     name: "HR (Human Resources)",
     kind: "ebs-module",
   },
   {
-    id: "a-int-sf",
+    id: "int-sf",
     layer: "application",
     name: "Salesforce Bridge",
     kind: "integration",
     description: "Bi-directional sync of accounts, contacts, opportunities to OM.",
-    runtimeProperties: {
-      Direction: "Bi-directional",
-      "Last sync": "90s ago",
-    },
+    runtimeProperties: { Direction: "Bi-directional", "Last sync": "90s ago" },
   },
   {
-    id: "a-int-wd",
+    id: "int-wd",
     layer: "application",
     name: "Workday Bridge",
     kind: "integration",
     description: "Inbound HR master data feed.",
-    runtimeProperties: {
-      Direction: "Inbound",
-      "Sync frequency": "15 min",
-    },
+    runtimeProperties: { Direction: "Inbound", "Sync frequency": "15 min" },
   },
   {
-    id: "a-int-snow",
+    id: "int-snow",
     layer: "application",
     name: "ServiceNow Bridge",
     kind: "integration",
@@ -215,61 +232,98 @@ const applicationComponents: ApplicationComponent[] = [
 ];
 
 // ============================================================
-// INFRASTRUCTURE RESOURCES
+// INFRASTRUCTURE RESOURCES (15)
 // ============================================================
+// Required IDs (validation): odba-rac, vm-cm, vm-apps-1, stg-redo, lb
 
 const infrastructureResources: InfrastructureResource[] = [
   {
-    id: "i-odba-rac",
+    id: "odba-rac",
     layer: "infrastructure",
-    name: "Oracle DB@Azure RAC",
+    name: "Oracle DB@Azure RAC (primary)",
     kind: "Database",
     azureResourceType:
       "Microsoft.OracleDatabase/cloudExadataInfrastructures",
     sku: "Exadata X11M · 2 nodes",
+    region: "eastus",
+    zoneRedundancy: 2,
+    matchesReference: true,
+  },
+  {
+    id: "odba-dg",
+    layer: "infrastructure",
+    name: "Oracle DB@Azure Data Guard standby",
+    kind: "Database",
+    azureResourceType:
+      "Microsoft.OracleDatabase/cloudExadataInfrastructures",
+    sku: "Exadata X11M · 1 node",
+    region: "centralus",
+    zoneRedundancy: 1,
+    matchesReference: false,
+    driftReason:
+      "Data Guard mode set to maximum performance · expected maximum availability",
+  },
+  {
+    id: "stg-redo",
+    layer: "infrastructure",
+    name: "Redo / Archive Storage",
+    kind: "Storage",
+    azureResourceType: "Microsoft.Compute/disks",
+    sku: "Premium SSD v1 · 20k IOPS budget",
+    region: "eastus",
+    zoneRedundancy: 1,
+    matchesReference: false,
+    driftReason:
+      "Premium SSD v1 · expected Premium SSD v2 with 32k IOPS budget",
+  },
+  {
+    id: "vm-apps-1",
+    layer: "infrastructure",
+    name: "Apps Tier VM 1",
+    kind: "Compute",
+    azureResourceType: "Microsoft.Compute/virtualMachines",
+    sku: "E32ds_v5 · zone 1",
+    region: "eastus",
+    zoneRedundancy: 1,
+    matchesReference: false,
+    driftReason: "Apps tier deployed in 1 zone · expected 3-zone spread",
+  },
+  {
+    id: "vm-apps-2",
+    layer: "infrastructure",
+    name: "Apps Tier VM 2",
+    kind: "Compute",
+    azureResourceType: "Microsoft.Compute/virtualMachines",
+    sku: "E32ds_v5 · zone 1",
+    region: "eastus",
+    zoneRedundancy: 1,
+    matchesReference: false,
+    driftReason: "Apps tier deployed in 1 zone · expected 3-zone spread",
+  },
+  {
+    id: "vm-cm",
+    layer: "infrastructure",
+    name: "Concurrent Manager VMs",
+    kind: "Compute",
+    azureResourceType: "Microsoft.Compute/virtualMachineScaleSets",
+    sku: "E16ds_v5 · 4 VMs",
+    region: "eastus",
+    zoneRedundancy: 2,
+    matchesReference: true,
+  },
+  {
+    id: "lb",
+    layer: "infrastructure",
+    name: "Apps Load Balancer",
+    kind: "Network",
+    azureResourceType: "Microsoft.Network/loadBalancers",
+    sku: "Standard LB · zone-redundant",
     region: "eastus",
     zoneRedundancy: 3,
     matchesReference: true,
   },
   {
-    id: "i-odba-dg",
-    layer: "infrastructure",
-    name: "Oracle DB@Azure Data Guard Standby",
-    kind: "Database",
-    azureResourceType:
-      "Microsoft.OracleDatabase/cloudExadataInfrastructures",
-    sku: "Exadata X11M · 2 nodes",
-    region: "centralus",
-    zoneRedundancy: 3,
-    matchesReference: false,
-    driftReason: "Data Guard mode set to maximum performance · expected maximum availability",
-  },
-  {
-    id: "i-stg-redo",
-    layer: "infrastructure",
-    name: "Redo / Archive Storage",
-    kind: "Storage",
-    azureResourceType: "Microsoft.Compute/disks",
-    sku: "Premium SSD v1 · 5,000 IOPS budget",
-    region: "eastus",
-    zoneRedundancy: 1,
-    matchesReference: false,
-    driftReason: "Premium SSD v1 · expected Premium SSD v2 with 7,500 IOPS budget",
-  },
-  {
-    id: "i-vmss-apps",
-    layer: "infrastructure",
-    name: "Apps Tier VMSS",
-    kind: "Compute",
-    azureResourceType: "Microsoft.Compute/virtualMachineScaleSets",
-    sku: "VMSS · 6 × D8s_v5 · zone 1 only",
-    region: "eastus",
-    zoneRedundancy: 1,
-    matchesReference: false,
-    driftReason: "Single-zone deployment · expected 3-zone spread",
-  },
-  {
-    id: "i-vnet",
+    id: "vnet",
     layer: "infrastructure",
     name: "Hub-Spoke VNet",
     kind: "Network",
@@ -280,7 +334,7 @@ const infrastructureResources: InfrastructureResource[] = [
     matchesReference: true,
   },
   {
-    id: "i-nsg-db",
+    id: "nsg-db",
     layer: "infrastructure",
     name: "DB NSG",
     kind: "Network",
@@ -289,10 +343,11 @@ const infrastructureResources: InfrastructureResource[] = [
     region: "eastus",
     zoneRedundancy: 3,
     matchesReference: false,
-    driftReason: "Inbound 1521 source range 10.0.0.0/8 · expected 10.10.0.0/16",
+    driftReason:
+      "Inbound 1521 source range 10.0.0.0/8 · expected 10.10.0.0/16",
   },
   {
-    id: "i-er",
+    id: "er",
     layer: "infrastructure",
     name: "ExpressRoute Circuit",
     kind: "Network",
@@ -303,7 +358,7 @@ const infrastructureResources: InfrastructureResource[] = [
     matchesReference: true,
   },
   {
-    id: "i-kv",
+    id: "kv",
     layer: "infrastructure",
     name: "Key Vault (HSM)",
     kind: "Security",
@@ -312,10 +367,11 @@ const infrastructureResources: InfrastructureResource[] = [
     region: "eastus",
     zoneRedundancy: 3,
     matchesReference: false,
-    driftReason: "Diagnostic settings missing · expected diagnostics → Log Analytics",
+    driftReason:
+      "Diagnostic settings missing · expected diagnostics → Log Analytics",
   },
   {
-    id: "i-monitor",
+    id: "monitor",
     layer: "infrastructure",
     name: "Log Analytics Workspace",
     kind: "Observability",
@@ -326,7 +382,7 @@ const infrastructureResources: InfrastructureResource[] = [
     matchesReference: true,
   },
   {
-    id: "i-defender",
+    id: "defender",
     layer: "infrastructure",
     name: "Defender for Cloud",
     kind: "Security",
@@ -337,7 +393,7 @@ const infrastructureResources: InfrastructureResource[] = [
     matchesReference: true,
   },
   {
-    id: "i-entra",
+    id: "entra",
     layer: "infrastructure",
     name: "Entra ID + PIM",
     kind: "Identity",
@@ -348,7 +404,7 @@ const infrastructureResources: InfrastructureResource[] = [
     matchesReference: true,
   },
   {
-    id: "i-fabric",
+    id: "fabric",
     layer: "infrastructure",
     name: "Microsoft Fabric (analytics mirror)",
     kind: "Integration",
@@ -358,160 +414,173 @@ const infrastructureResources: InfrastructureResource[] = [
     zoneRedundancy: 3,
     matchesReference: true,
   },
-  {
-    id: "i-untagged",
-    layer: "infrastructure",
-    name: "Apps RG Build VM",
-    kind: "Compute",
-    azureResourceType: "Microsoft.Compute/virtualMachines",
-    sku: "Standard_D2s_v5 · build/staging",
-    region: "eastus",
-    zoneRedundancy: 1,
-    matchesReference: false,
-    driftReason: "Resource untagged · expected workload, owner, costcenter tags",
-  },
 ];
 
 // ============================================================
-// DEPENDENCIES — process → app, app → app, app → infra
+// DEPENDENCIES — process → app, app → app, app → infra, infra → infra
 // ============================================================
 
 const dependencies: Dependency[] = [
-  // Processes → application modules
-  { id: "d-gl-cm", fromId: "p-gl-close", toId: "a-cm", kind: "uses", weight: 1 },
-  { id: "d-gl-gl", fromId: "p-gl-close", toId: "a-gl", kind: "uses", weight: 1 },
-  { id: "d-gl-forms", fromId: "p-gl-close", toId: "a-forms", kind: "uses", weight: 0.5 },
+  // Processes → application
+  { id: "d-glclose-gl",      fromId: "gl-close",   toId: "gl",   kind: "uses", weight: 1 },
+  { id: "d-glclose-cm",      fromId: "gl-close",   toId: "cm",   kind: "uses", weight: 1 },
+  { id: "d-glclose-wf",      fromId: "gl-close",   toId: "wf",   kind: "uses", weight: 0.7 },
 
-  { id: "d-o2c-om", fromId: "p-o2c", toId: "a-om", kind: "uses", weight: 1 },
-  { id: "d-o2c-ar", fromId: "p-o2c", toId: "a-ar", kind: "uses", weight: 1 },
-  { id: "d-o2c-forms", fromId: "p-o2c", toId: "a-forms", kind: "uses", weight: 1 },
-  { id: "d-o2c-sf", fromId: "p-o2c", toId: "a-int-sf", kind: "uses", weight: 0.7 },
+  { id: "d-o2c-om",          fromId: "o2c",        toId: "om",   kind: "uses", weight: 1 },
+  { id: "d-o2c-ar",          fromId: "o2c",        toId: "ar",   kind: "uses", weight: 1 },
+  { id: "d-o2c-forms",       fromId: "o2c",        toId: "forms", kind: "uses", weight: 1 },
+  { id: "d-o2c-sf",          fromId: "o2c",        toId: "int-sf", kind: "uses", weight: 0.6 },
 
-  { id: "d-p2p-po", fromId: "p-p2p", toId: "a-po", kind: "uses", weight: 1 },
-  { id: "d-p2p-ap", fromId: "p-p2p", toId: "a-ap", kind: "uses", weight: 1 },
-  { id: "d-p2p-inv", fromId: "p-p2p", toId: "a-inv", kind: "uses", weight: 0.5 },
+  { id: "d-p2p-po",          fromId: "p2p",        toId: "po",   kind: "uses", weight: 1 },
+  { id: "d-p2p-ap",          fromId: "p2p",        toId: "ap",   kind: "uses", weight: 1 },
+  { id: "d-p2p-inv",         fromId: "p2p",        toId: "inv",  kind: "uses", weight: 0.5 },
 
-  { id: "d-ap-cm", fromId: "p-ap-import", toId: "a-cm", kind: "uses", weight: 1 },
-  { id: "d-ap-ap", fromId: "p-ap-import", toId: "a-ap", kind: "uses", weight: 1 },
+  { id: "d-apval-ap",        fromId: "ap-val",     toId: "ap",   kind: "uses", weight: 1 },
+  { id: "d-apval-cm",        fromId: "ap-val",     toId: "cm",   kind: "uses", weight: 1 },
+  { id: "d-apval-wf",        fromId: "ap-val",     toId: "wf",   kind: "uses", weight: 0.5 },
 
-  { id: "d-inv-inv", fromId: "p-inv", toId: "a-inv", kind: "uses", weight: 1 },
-  { id: "d-inv-cm", fromId: "p-inv", toId: "a-cm", kind: "uses", weight: 0.6 },
+  { id: "d-mrp-cm",          fromId: "mrp",        toId: "cm",   kind: "uses", weight: 1 },
+  { id: "d-mrp-inv",         fromId: "mrp",        toId: "inv",  kind: "uses", weight: 1 },
 
-  { id: "d-hr-hr", fromId: "p-hr-payroll", toId: "a-hr", kind: "uses", weight: 1 },
-  { id: "d-hr-cm", fromId: "p-hr-payroll", toId: "a-cm", kind: "uses", weight: 1 },
-  { id: "d-hr-wd", fromId: "p-hr-payroll", toId: "a-int-wd", kind: "uses", weight: 0.5 },
+  { id: "d-cmb-cm",          fromId: "cm-batch",   toId: "cm",   kind: "uses", weight: 1 },
 
-  { id: "d-fr-gl", fromId: "p-financial-close", toId: "a-gl", kind: "uses", weight: 1 },
-  { id: "d-fr-cm", fromId: "p-financial-close", toId: "a-cm", kind: "uses", weight: 0.7 },
+  { id: "d-payroll-hr",      fromId: "payroll",    toId: "hr",   kind: "uses", weight: 1 },
+  { id: "d-payroll-cm",      fromId: "payroll",    toId: "cm",   kind: "uses", weight: 1 },
+  { id: "d-payroll-wd",      fromId: "payroll",    toId: "int-wd", kind: "uses", weight: 0.5 },
 
-  // Application modules → CM (modules dispatch via CM)
-  // (CM is shown as central hub already)
+  { id: "d-fr-gl",           fromId: "fin-report", toId: "gl",   kind: "uses", weight: 1 },
+  { id: "d-fr-wf",           fromId: "fin-report", toId: "wf",   kind: "uses", weight: 0.5 },
+  { id: "d-fr-fabric-app",   fromId: "fin-report", toId: "int-snow", kind: "uses", weight: 0.2 }, // outbound notify
 
-  // Application → infrastructure
-  { id: "d-cm-rac", fromId: "a-cm", toId: "i-odba-rac", kind: "stores-in", weight: 1 },
-  { id: "d-cm-vmss", fromId: "a-cm", toId: "i-vmss-apps", kind: "uses", weight: 1 },
-  { id: "d-forms-vmss", fromId: "a-forms", toId: "i-vmss-apps", kind: "uses", weight: 1 },
-  { id: "d-gl-rac", fromId: "a-gl", toId: "i-odba-rac", kind: "stores-in", weight: 1 },
-  { id: "d-ap-rac", fromId: "a-ap", toId: "i-odba-rac", kind: "stores-in", weight: 1 },
-  { id: "d-ar-rac", fromId: "a-ar", toId: "i-odba-rac", kind: "stores-in", weight: 1 },
-  { id: "d-om-rac", fromId: "a-om", toId: "i-odba-rac", kind: "stores-in", weight: 1 },
-  { id: "d-po-rac", fromId: "a-po", toId: "i-odba-rac", kind: "stores-in", weight: 1 },
-  { id: "d-inv-rac", fromId: "a-inv", toId: "i-odba-rac", kind: "stores-in", weight: 1 },
-  { id: "d-hr-rac", fromId: "a-hr", toId: "i-odba-rac", kind: "stores-in", weight: 1 },
+  // Application → infrastructure (modules store in DB; runtimes use VMs)
+  { id: "d-cm-rac",   fromId: "cm",    toId: "odba-rac",  kind: "stores-in", weight: 1 },
+  { id: "d-cm-vmcm",  fromId: "cm",    toId: "vm-cm",     kind: "uses",      weight: 1 },
+  { id: "d-wf-rac",   fromId: "wf",    toId: "odba-rac",  kind: "stores-in", weight: 1 },
+  { id: "d-wf-vmcm",  fromId: "wf",    toId: "vm-cm",     kind: "uses",      weight: 0.6 },
+  { id: "d-forms-vm1", fromId: "forms", toId: "vm-apps-1", kind: "uses",     weight: 1 },
+  { id: "d-forms-vm2", fromId: "forms", toId: "vm-apps-2", kind: "uses",     weight: 1 },
+  { id: "d-gl-rac",   fromId: "gl",    toId: "odba-rac",  kind: "stores-in", weight: 1 },
+  { id: "d-gl-vm1",   fromId: "gl",    toId: "vm-apps-1", kind: "uses",      weight: 1 },
+  { id: "d-ap-rac",   fromId: "ap",    toId: "odba-rac",  kind: "stores-in", weight: 1 },
+  { id: "d-ap-vm1",   fromId: "ap",    toId: "vm-apps-1", kind: "uses",      weight: 1 },
+  { id: "d-ar-rac",   fromId: "ar",    toId: "odba-rac",  kind: "stores-in", weight: 1 },
+  { id: "d-ar-vm1",   fromId: "ar",    toId: "vm-apps-1", kind: "uses",      weight: 1 },
+  { id: "d-om-rac",   fromId: "om",    toId: "odba-rac",  kind: "stores-in", weight: 1 },
+  { id: "d-om-vm1",   fromId: "om",    toId: "vm-apps-1", kind: "uses",      weight: 1 },
+  { id: "d-po-rac",   fromId: "po",    toId: "odba-rac",  kind: "stores-in", weight: 1 },
+  { id: "d-po-vm1",   fromId: "po",    toId: "vm-apps-1", kind: "uses",      weight: 1 },
+  { id: "d-inv-rac",  fromId: "inv",   toId: "odba-rac",  kind: "stores-in", weight: 1 },
+  { id: "d-inv-vm1",  fromId: "inv",   toId: "vm-apps-1", kind: "uses",      weight: 1 },
+  { id: "d-hr-rac",   fromId: "hr",    toId: "odba-rac",  kind: "stores-in", weight: 1 },
+  { id: "d-hr-vm1",   fromId: "hr",    toId: "vm-apps-1", kind: "uses",      weight: 1 },
 
-  { id: "d-int-sf-vnet", fromId: "a-int-sf", toId: "i-vnet", kind: "communicates-with", weight: 1 },
-  { id: "d-int-wd-vnet", fromId: "a-int-wd", toId: "i-vnet", kind: "communicates-with", weight: 1 },
-  { id: "d-int-snow-vnet", fromId: "a-int-snow", toId: "i-vnet", kind: "communicates-with", weight: 1 },
+  { id: "d-sf-vnet",   fromId: "int-sf",   toId: "vnet", kind: "communicates-with", weight: 1 },
+  { id: "d-wd-vnet",   fromId: "int-wd",   toId: "vnet", kind: "communicates-with", weight: 1 },
+  { id: "d-snow-vnet", fromId: "int-snow", toId: "vnet", kind: "communicates-with", weight: 1 },
 
   // Infrastructure → infrastructure
-  { id: "d-rac-stg", fromId: "i-odba-rac", toId: "i-stg-redo", kind: "stores-in", weight: 1 },
-  { id: "d-rac-dg", fromId: "i-odba-rac", toId: "i-odba-dg", kind: "communicates-with", weight: 1 },
-  { id: "d-rac-vnet", fromId: "i-odba-rac", toId: "i-vnet", kind: "communicates-with", weight: 1 },
-  { id: "d-rac-nsg", fromId: "i-odba-rac", toId: "i-nsg-db", kind: "monitored-by", weight: 1 },
-  { id: "d-vnet-er", fromId: "i-vnet", toId: "i-er", kind: "communicates-with", weight: 1 },
-  { id: "d-rac-kv", fromId: "i-odba-rac", toId: "i-kv", kind: "uses", weight: 0.6 },
-  { id: "d-rac-mon", fromId: "i-odba-rac", toId: "i-monitor", kind: "monitored-by", weight: 1 },
-  { id: "d-vmss-mon", fromId: "i-vmss-apps", toId: "i-monitor", kind: "monitored-by", weight: 1 },
-  { id: "d-rac-defender", fromId: "i-odba-rac", toId: "i-defender", kind: "monitored-by", weight: 0.7 },
-  { id: "d-rac-entra", fromId: "i-odba-rac", toId: "i-entra", kind: "uses", weight: 1 },
-  { id: "d-rac-fabric", fromId: "i-odba-rac", toId: "i-fabric", kind: "communicates-with", weight: 0.5 },
+  { id: "d-rac-stg",     fromId: "odba-rac",   toId: "stg-redo", kind: "stores-in",        weight: 1 },
+  { id: "d-rac-dg",      fromId: "odba-rac",   toId: "odba-dg",  kind: "communicates-with", weight: 1 },
+  { id: "d-rac-vnet",    fromId: "odba-rac",   toId: "vnet",     kind: "communicates-with", weight: 1 },
+  { id: "d-rac-nsg",     fromId: "odba-rac",   toId: "nsg-db",   kind: "monitored-by",     weight: 1 },
+  { id: "d-rac-kv",      fromId: "odba-rac",   toId: "kv",       kind: "uses",             weight: 0.6 },
+  { id: "d-rac-monitor", fromId: "odba-rac",   toId: "monitor",  kind: "monitored-by",     weight: 1 },
+  { id: "d-rac-defender", fromId: "odba-rac",  toId: "defender", kind: "monitored-by",     weight: 0.7 },
+  { id: "d-rac-entra",   fromId: "odba-rac",   toId: "entra",    kind: "uses",             weight: 1 },
+  { id: "d-rac-fabric",  fromId: "odba-rac",   toId: "fabric",   kind: "communicates-with", weight: 0.5 },
+
+  { id: "d-vm1-lb",      fromId: "vm-apps-1",  toId: "lb",       kind: "communicates-with", weight: 1 },
+  { id: "d-vm2-lb",      fromId: "vm-apps-2",  toId: "lb",       kind: "communicates-with", weight: 1 },
+  { id: "d-vm1-vnet",    fromId: "vm-apps-1",  toId: "vnet",     kind: "communicates-with", weight: 1 },
+  { id: "d-vm2-vnet",    fromId: "vm-apps-2",  toId: "vnet",     kind: "communicates-with", weight: 1 },
+  { id: "d-vmcm-vnet",   fromId: "vm-cm",      toId: "vnet",     kind: "communicates-with", weight: 1 },
+  { id: "d-vm1-monitor", fromId: "vm-apps-1",  toId: "monitor",  kind: "monitored-by",     weight: 1 },
+  { id: "d-vm2-monitor", fromId: "vm-apps-2",  toId: "monitor",  kind: "monitored-by",     weight: 1 },
+  { id: "d-vmcm-monitor", fromId: "vm-cm",     toId: "monitor",  kind: "monitored-by",     weight: 1 },
+
+  { id: "d-vnet-er",     fromId: "vnet",       toId: "er",       kind: "communicates-with", weight: 1 },
 ];
 
 // ============================================================
-// DRIFT
+// DRIFT (6) — first one is the post-mortem hero
 // ============================================================
 
 export const ebsProdDrift: DriftItem[] = [
   {
-    id: "drift-1",
+    id: "drift-iops",
     workloadId: "ebs-prod",
-    componentId: "i-stg-redo",
+    componentId: "stg-redo",
     property: "Premium SSD v2 IOPS budget",
-    actual: "Premium SSD v1 · 5,000 IOPS",
-    expected: "Premium SSD v2 · 7,500 IOPS",
+    actual: "Premium SSD v1 · 20k IOPS",
+    expected: "Premium SSD v2 · 32k IOPS",
     severity: "critical",
-    detectedAt: "2026-04-22T08:14:00Z",
-    impact: "Insufficient IOPS headroom for log file sync during heavy CM batch periods (e.g. period close).",
+    detectedAt: daysAgo(9),
+    impact:
+      "Insufficient IOPS headroom for log file sync during heavy CM batch periods (e.g. period close).",
   },
   {
-    id: "drift-2",
+    id: "drift-zones",
     workloadId: "ebs-prod",
-    componentId: "i-vmss-apps",
+    componentId: "vm-apps-1",
     property: "Apps tier zone redundancy",
-    actual: "Single zone (zone 1)",
+    actual: "All apps VMs in zone 1",
     expected: "Spread across 3 zones",
     severity: "warning",
-    detectedAt: "2026-04-08T11:00:00Z",
-    impact: "Loss of single zone takes apps tier offline during the period close window.",
+    detectedAt: daysAgo(25),
+    impact:
+      "Loss of single zone takes apps tier offline during the period close window.",
   },
   {
-    id: "drift-3",
+    id: "drift-nsg",
     workloadId: "ebs-prod",
-    componentId: "i-nsg-db",
+    componentId: "nsg-db",
     property: "NSG inbound 1521 source range",
     actual: "10.0.0.0/8",
     expected: "10.10.0.0/16",
     severity: "warning",
-    detectedAt: "2026-04-20T14:42:00Z",
-    impact: "Broader-than-expected DB exposure surface inside the corporate network.",
+    detectedAt: daysAgo(13),
+    impact:
+      "Broader-than-expected DB exposure surface inside the corporate network.",
   },
   {
-    id: "drift-4",
+    id: "drift-dg",
     workloadId: "ebs-prod",
-    componentId: "i-odba-dg",
+    componentId: "odba-dg",
     property: "Data Guard mode",
     actual: "Maximum performance",
     expected: "Maximum availability",
     severity: "warning",
-    detectedAt: "2026-03-30T09:00:00Z",
+    detectedAt: daysAgo(34),
     impact: "Higher RPO than committed (15 min target) under primary site failure.",
   },
   {
-    id: "drift-5",
+    id: "drift-kv",
     workloadId: "ebs-prod",
-    componentId: "i-kv",
+    componentId: "kv",
     property: "Diagnostic settings",
     actual: "No diagnostic settings configured",
     expected: "Diagnostics → Log Analytics workspace",
     severity: "warning",
-    detectedAt: "2026-04-12T10:11:00Z",
-    impact: "Audit gap: Key Vault access events not centrally logged. SOX evidence weakened.",
+    detectedAt: daysAgo(21),
+    impact:
+      "Audit gap: Key Vault access events not centrally logged. SOX evidence weakened.",
   },
   {
-    id: "drift-6",
+    id: "drift-untagged",
     workloadId: "ebs-prod",
-    componentId: "i-untagged",
+    componentId: "vm-apps-2",
     property: "Resource tags",
-    actual: "No tags",
+    actual: "Missing workload + costcenter tags",
     expected: "workload, owner, costcenter tags required",
     severity: "info",
-    detectedAt: "2026-04-25T07:00:00Z",
-    impact: "Resource not attributable to a workload — distorts FinOps cost-per-process roll-up.",
+    detectedAt: daysAgo(8),
+    impact:
+      "Resource not attributable to a workload — distorts FinOps cost-per-process roll-up.",
   },
 ];
 
 // ============================================================
-// RECOMMENDATIONS — ranked by criticality of affected processes
+// RECOMMENDATIONS (9) — ranked by criticality of affected processes
 // ============================================================
 
 export const ebsProdRecommendations: Recommendation[] = [
@@ -520,32 +589,32 @@ export const ebsProdRecommendations: Recommendation[] = [
     workloadId: "ebs-prod",
     category: "Reliability",
     severity: "critical",
-    title: "Bump redo storage to Premium SSD v2 (7,500 IOPS)",
+    title: "Bump redo storage to Premium SSD v2 (32k IOPS)",
     rationale:
-      "Redo volume on Premium SSD v1 with 5,000 IOPS budget. Period close batches have shown sustained spikes to 4,800 IOPS with no headroom — log file sync waits become bottleneck under load. Premium SSD v2 provides 7,500 IOPS with burst capability and matches archetype v2.4.",
-    affectedProcesses: ["p-gl-close", "p-ap-import", "p-financial-close", "p-hr-payroll"],
-    affectedResources: ["i-stg-redo", "i-odba-rac"],
+      "Redo volume on Premium SSD v1 with 20k IOPS budget. Period close batches have shown sustained spikes to 19k IOPS with no headroom — log file sync waits become bottleneck under load. Premium SSD v2 provides 32k IOPS with burst capability and matches archetype v2.4.",
+    affectedProcesses: ["gl-close", "ap-val", "fin-report", "payroll"],
+    affectedResources: ["stg-redo", "odba-rac"],
     estimatedCostDeltaUsdPerMonth: 380,
     estimatedRiskReductionPct: 64,
     iaCPullRequest: "PR-4471",
     status: "deferred",
-    flaggedAt: "2026-04-22T08:14:00Z",
+    flaggedAt: daysAgo(9),
   },
   {
     id: "rec-3801",
     workloadId: "ebs-prod",
     category: "Reliability",
     severity: "high",
-    title: "Spread apps-tier VMSS across 3 availability zones",
+    title: "Spread apps-tier VMs across 3 availability zones",
     rationale:
-      "Apps tier VMSS deployed in zone 1 only. Loss of zone takes form/self-service offline. Archetype v2.4 specifies spread across 3 zones (2 instances per zone). No SKU change required.",
-    affectedProcesses: ["p-o2c", "p-gl-close", "p-p2p"],
-    affectedResources: ["i-vmss-apps"],
+      "Apps tier VMs deployed in zone 1 only. Loss of zone takes form/self-service offline. Archetype v2.4 specifies spread across 3 zones (2 instances per zone). No SKU change required.",
+    affectedProcesses: ["o2c", "gl-close", "p2p"],
+    affectedResources: ["vm-apps-1", "vm-apps-2"],
     estimatedCostDeltaUsdPerMonth: 0,
     estimatedRiskReductionPct: 38,
     iaCPullRequest: "PR-4472",
     status: "open",
-    flaggedAt: "2026-04-08T11:00:00Z",
+    flaggedAt: daysAgo(25),
   },
   {
     id: "rec-3914",
@@ -555,12 +624,12 @@ export const ebsProdRecommendations: Recommendation[] = [
     title: "Tighten NSG inbound 1521 source range",
     rationale:
       "DB NSG allows inbound 1521 from 10.0.0.0/8. Apps tier sits in 10.10.0.0/16. Reduce blast radius and meet archetype baseline.",
-    affectedProcesses: ["p-gl-close", "p-o2c", "p-p2p", "p-ap-import"],
-    affectedResources: ["i-nsg-db"],
+    affectedProcesses: ["gl-close", "o2c", "p2p", "ap-val"],
+    affectedResources: ["nsg-db"],
     estimatedRiskReductionPct: 22,
     iaCPullRequest: "PR-4473",
     status: "open",
-    flaggedAt: "2026-04-20T14:42:00Z",
+    flaggedAt: daysAgo(13),
   },
   {
     id: "rec-4012",
@@ -570,12 +639,12 @@ export const ebsProdRecommendations: Recommendation[] = [
     title: "Switch Data Guard to maximum availability",
     rationale:
       "Standby is in maximum performance mode (async). RPO commitment is 15 min — maximum availability mode achieves lower RPO without performance impact in current network conditions.",
-    affectedProcesses: ["p-gl-close", "p-financial-close"],
-    affectedResources: ["i-odba-dg"],
+    affectedProcesses: ["gl-close", "fin-report"],
+    affectedResources: ["odba-dg"],
     estimatedRiskReductionPct: 18,
     iaCPullRequest: "PR-4474",
     status: "open",
-    flaggedAt: "2026-03-30T09:00:00Z",
+    flaggedAt: daysAgo(34),
   },
   {
     id: "rec-4101",
@@ -585,12 +654,12 @@ export const ebsProdRecommendations: Recommendation[] = [
     title: "Repurpose 30% of standby Exadata for read-only reporting",
     rationale:
       "Active Data Guard is enabled but not used for reporting. Re-pointing Hyperion and Fabric mirror to standby recovers 30% of standby capacity for paid use. Estimated $14K/mo savings.",
-    affectedProcesses: ["p-financial-close"],
-    affectedResources: ["i-odba-dg", "i-fabric"],
+    affectedProcesses: ["fin-report"],
+    affectedResources: ["odba-dg", "fabric"],
     estimatedCostDeltaUsdPerMonth: -14_000,
     estimatedRiskReductionPct: 0,
     status: "open",
-    flaggedAt: "2026-04-15T13:00:00Z",
+    flaggedAt: daysAgo(18),
   },
   {
     id: "rec-4202",
@@ -600,26 +669,26 @@ export const ebsProdRecommendations: Recommendation[] = [
     title: "Enable diagnostic settings on Key Vault",
     rationale:
       "Key Vault has no diagnostic export. SOX audit trail incomplete. Configure diagnostic settings → Log Analytics workspace.",
-    affectedProcesses: ["p-financial-close", "p-hr-payroll"],
-    affectedResources: ["i-kv", "i-monitor"],
+    affectedProcesses: ["fin-report", "payroll"],
+    affectedResources: ["kv", "monitor"],
     estimatedRiskReductionPct: 8,
     iaCPullRequest: "PR-4475",
     status: "open",
-    flaggedAt: "2026-04-12T10:11:00Z",
+    flaggedAt: daysAgo(21),
   },
   {
     id: "rec-4303",
     workloadId: "ebs-prod",
     category: "Cost",
     severity: "low",
-    title: "Rightsize apps-tier VMSS during off-peak",
+    title: "Rightsize apps-tier VMs during off-peak",
     rationale:
       "Apps tier averages 38% utilization. Auto-scale rule can shrink to 4 instances overnight (22:00–06:00 UTC) and recover $3K/mo.",
-    affectedProcesses: ["p-o2c"],
-    affectedResources: ["i-vmss-apps"],
+    affectedProcesses: ["o2c"],
+    affectedResources: ["vm-apps-1", "vm-apps-2"],
     estimatedCostDeltaUsdPerMonth: -3_000,
     status: "open",
-    flaggedAt: "2026-04-18T08:00:00Z",
+    flaggedAt: daysAgo(15),
   },
   {
     id: "rec-4404",
@@ -627,24 +696,26 @@ export const ebsProdRecommendations: Recommendation[] = [
     category: "Cost",
     severity: "low",
     title: "Move > 90d archive logs to cold tier",
-    rationale: "Archive log retention > 90 days served from hot tier. Cold tier saves $2K/mo with no operational impact.",
-    affectedProcesses: ["p-financial-close"],
-    affectedResources: ["i-stg-redo"],
+    rationale:
+      "Archive log retention > 90 days served from hot tier. Cold tier saves $2K/mo with no operational impact.",
+    affectedProcesses: ["fin-report"],
+    affectedResources: ["stg-redo"],
     estimatedCostDeltaUsdPerMonth: -2_000,
     status: "open",
-    flaggedAt: "2026-04-19T08:00:00Z",
+    flaggedAt: daysAgo(14),
   },
   {
     id: "rec-4505",
     workloadId: "ebs-prod",
     category: "Operations",
     severity: "low",
-    title: "Tag untagged build VM in apps RG",
-    rationale: "Build VM is untagged — distorts FinOps cost-per-process. Apply workload, owner, costcenter tags.",
+    title: "Tag untagged apps tier VM",
+    rationale:
+      "vm-apps-2 missing workload + costcenter tags — distorts FinOps cost-per-process. Apply tags.",
     affectedProcesses: [],
-    affectedResources: ["i-untagged"],
+    affectedResources: ["vm-apps-2"],
     status: "open",
-    flaggedAt: "2026-04-25T07:00:00Z",
+    flaggedAt: daysAgo(8),
   },
 ];
 
@@ -657,58 +728,66 @@ export const ebsProdIncident: Incident = {
   workloadId: "ebs-prod",
   severity: "P1",
   status: "active",
-  title: "GL Period Close at risk · log file sync waits driven by storage IOPS throttle",
-  startedAt: "T+00m",
+  title:
+    "GL Period Close at risk · log file sync waits driven by storage IOPS throttle",
+  startedAt: hoursAgo(0),
   pagedPersonaIds: ["dba", "appadmin", "sre", "bizops", "finops"],
   recommendedRunbookId: "RB-217",
   causalChain: [
     {
-      componentId: "i-stg-redo",
+      componentId: "stg-redo",
       layer: "infrastructure",
       observedAt: "T-08m",
-      summary: "Redo storage approaching 5,000 IOPS budget · Premium SSD v1 cannot burst.",
+      summary:
+        "Redo storage approaching 20k IOPS budget · Premium SSD v1 cannot burst.",
       health: "warning",
     },
     {
-      componentId: "i-stg-redo",
+      componentId: "stg-redo",
       layer: "infrastructure",
       observedAt: "T+00m",
-      summary: "Redo storage IOPS sustained at 5,000 · throttle engaged · write latency P95 18ms vs 4ms baseline.",
+      summary:
+        "Redo storage IOPS sustained at 20k · throttle engaged · write latency P95 18ms vs 4ms baseline.",
       health: "critical",
     },
     {
-      componentId: "i-odba-rac",
+      componentId: "odba-rac",
       layer: "infrastructure",
       observedAt: "T+02m",
-      summary: "Oracle RAC log file sync wait class jumps to 72% of total · gc cr block 2-way also climbing.",
+      summary:
+        "Oracle RAC log file sync wait class jumps to 72% of total · gc cr block 2-way also climbing.",
       health: "critical",
     },
     {
-      componentId: "i-odba-rac",
+      componentId: "odba-rac",
       layer: "infrastructure",
       observedAt: "T+04m",
-      summary: "RAC node 2 evicted from cluster · log file sync waits exceeded 90s threshold. Now running on node 1 only.",
+      summary:
+        "RAC node 2 evicted from cluster · log file sync waits exceeded 90s threshold. Now running on node 1 only.",
       health: "critical",
     },
     {
-      componentId: "a-cm",
+      componentId: "cm",
       layer: "application",
       observedAt: "T+05m",
-      summary: "Concurrent Manager queue depth 4,210 (10× baseline) · 32 workers stalled on log file sync.",
+      summary:
+        "Concurrent Manager queue depth 4,210 (10× baseline) · 32 workers stalled on log file sync.",
       health: "critical",
     },
     {
-      componentId: "a-gl",
+      componentId: "gl",
       layer: "application",
       observedAt: "T+08m",
-      summary: "GL period close batch lagging · GL_INTERFACE backlog 18,400 rows · projected to miss 8h SLO.",
+      summary:
+        "GL period close batch lagging · GL_INTERFACE backlog 18,400 rows · projected to miss 8h SLO.",
       health: "warning",
     },
     {
-      componentId: "p-gl-close",
+      componentId: "gl-close",
       layer: "process",
       observedAt: "T+12m",
-      summary: "GL Period Close projected completion 11h vs 8h SLO. $4.2M/day revenue at risk if close slips a business day.",
+      summary:
+        "GL Period Close projected completion 11h vs 8h SLO. $4.2M/day revenue at risk if close slips a business day.",
       health: "critical",
     },
   ],
@@ -718,44 +797,48 @@ export const ebsProdIncident: Incident = {
       title: "Acknowledge incident and freeze new CM job submissions",
       description:
         "Pause Concurrent Manager queue intake for non-critical jobs (planning, MRP, ad-hoc reports). Critical period-close batches continue.",
-      componentId: "a-cm",
+      componentId: "cm",
       estimatedMinutes: 1,
     },
     {
       id: "rb-217-2",
       title: "Engage DBA — capture AWR snapshot & wait events",
-      description: "Snapshot AWR for the 30-minute window. Validate log file sync as primary wait event.",
-      componentId: "i-odba-rac",
+      description:
+        "Snapshot AWR for the 30-minute window. Validate log file sync as primary wait event.",
+      componentId: "odba-rac",
       estimatedMinutes: 3,
     },
     {
       id: "rb-217-3",
       title: "Hold non-essential CM workers, focus on close batches",
-      description: "Reduce CM worker count from 32 → 12 to prioritize close throughput while storage is constrained.",
-      componentId: "a-cm",
+      description:
+        "Reduce CM worker count from 32 → 12 to prioritize close throughput while storage is constrained.",
+      componentId: "cm",
       estimatedMinutes: 2,
     },
     {
       id: "rb-217-4",
       title: "Bump redo storage to Premium SSD v2 (CSA approval required)",
       description:
-        "Apply IaC PR-4471: change redo disk SKU from Premium SSD v1 → v2 (7,500 IOPS budget). Online operation, no downtime.",
-      componentId: "i-stg-redo",
+        "Apply IaC PR-4471: change redo disk SKU from Premium SSD v1 → v2 (32k IOPS budget). Online operation, no downtime.",
+      componentId: "stg-redo",
       estimatedMinutes: 7,
       destructive: false,
     },
     {
       id: "rb-217-5",
       title: "Re-add RAC node 2 to cluster",
-      description: "Once write latency normalizes, srvctl start instance and re-balance services across 2 nodes.",
-      componentId: "i-odba-rac",
+      description:
+        "Once write latency normalizes, srvctl start instance and re-balance services across 2 nodes.",
+      componentId: "odba-rac",
       estimatedMinutes: 3,
     },
     {
       id: "rb-217-6",
       title: "Drain CM backlog and re-open intake",
-      description: "Restore CM workers to 32, resume non-critical job intake, validate close-batch trajectory.",
-      componentId: "a-cm",
+      description:
+        "Restore CM workers to 32, resume non-critical job intake, validate close-batch trajectory.",
+      componentId: "cm",
       estimatedMinutes: 2,
     },
   ],
@@ -769,12 +852,10 @@ We detected an at-risk condition on tonight's GL Period Close batch at **T+00m**
 
 **Mitigation in progress:**
 - Non-critical batch jobs paused (T+05m)
-- Storage IOPS budget being raised from 5,000 → 7,500 via online SKU change (T+12m)
+- Storage IOPS budget being raised from 20k → 32k via online SKU change (T+12m)
 - RAC node 2 to be re-added once storage normalizes (T+18m)
 
-**Expected close completion:** **7h 42m** post-mitigation — within SLO.
-
-**No data loss. No financial posting at risk.** Audit trail intact and SOX evidence package will be generated post-close.
+**Expected close completion:** **7h 42m** post-mitigation — within SLO. **No data loss. No financial posting at risk.** Audit trail intact and SOX evidence package will be generated post-close.
 
 A full post-mortem and a contributing-factor review (a related recommendation was deferred 9 days ago) will follow.
 
@@ -784,7 +865,7 @@ A full post-mortem and a contributing-factor review (a related recommendation wa
 **Severity:** P1 · **Resolved:** T+45m · **MTTR:** 45 min · **Customer impact:** none (mitigated within SLO)
 
 ## Summary
-Premium SSD v1 redo storage hit its 5,000 IOPS sustained budget during the period-close batch window. Storage write latency tripled (4ms → 18ms P95), which propagated into the Oracle RAC tier as log file sync waits, evicted node 2, saturated the Concurrent Manager queue, and put the GL Period Close on a trajectory to miss its 8h SLO with **$4.2M/day** of revenue at risk.
+Premium SSD v1 redo storage hit its 20k IOPS sustained budget during the period-close batch window. Storage write latency tripled (4ms → 18ms P95), which propagated into the Oracle RAC tier as log file sync waits, evicted node 2, saturated the Concurrent Manager queue, and put the GL Period Close on a trajectory to miss its 8h SLO with **$4.2M/day** of revenue at risk.
 
 ## Causal chain
 \`Premium SSD v1 IOPS throttle\` → \`Oracle RAC log file sync waits\` → \`RAC node 2 eviction\` → \`Concurrent Manager queue saturation\` → \`GL_INTERFACE backlog\` → \`GL Period Close at risk\`.
@@ -798,7 +879,7 @@ Premium SSD v1 redo storage hit its 5,000 IOPS sustained budget during the perio
 **Recommendation R-2271 ("Bump redo storage to Premium SSD v2") was flagged 9 days ago and auto-deferred** by policy P-4 (cost-impacting changes deferred to monthly review). The auto-defer policy did not weight the criticality of the affected process (Tier-1, GL Period Close).
 
 ## Action items
-1. **Apply IaC PR-4471** (already executed during incident) — redo storage now Premium SSD v2 / 7,500 IOPS budget. **Owner:** DBA. **Done.**
+1. **Apply IaC PR-4471** (already executed during incident) — redo storage now Premium SSD v2 / 32k IOPS budget. **Owner:** DBA. **Done.**
 2. **Re-evaluate auto-defer policy P-4.** Never auto-defer recommendations affecting Tier-1 processes. **Owner:** SRE + CSA.
 3. **Add proactive capacity check** to weekly review: storage IOPS headroom for redo volume across all Tier-1 workloads. **Owner:** Platform.
 4. **Apply rec-3801** (apps tier zone redundancy) to remove the secondary risk surfaced during this incident. **Owner:** Platform.
@@ -837,35 +918,53 @@ export const ebsProd: Workload = {
   slos: [
     {
       id: "slo-gl-close",
-      processId: "p-gl-close",
+      processId: "gl-close",
       name: "GL Period Close completion",
       target: "Complete within 8h, monthly",
       current: 0.998,
       errorBudgetRemaining: 0.62,
     },
     {
-      id: "slo-o2c-availability",
-      processId: "p-o2c",
+      id: "slo-o2c",
+      processId: "o2c",
       name: "O2C availability",
       target: "99.9% over 30d",
       current: 0.9994,
       errorBudgetRemaining: 0.78,
     },
     {
-      id: "slo-p2p-availability",
-      processId: "p-p2p",
+      id: "slo-p2p",
+      processId: "p2p",
       name: "P2P availability",
       target: "99.5% over 30d",
       current: 0.9989,
       errorBudgetRemaining: 0.92,
     },
     {
-      id: "slo-ap-import",
-      processId: "p-ap-import",
-      name: "AP invoice import lag",
+      id: "slo-ap-val",
+      processId: "ap-val",
+      name: "AP invoice validation lag",
       target: "< 30 min",
       current: 0.997,
       errorBudgetRemaining: 0.85,
     },
+    {
+      id: "slo-payroll",
+      processId: "payroll",
+      name: "Payroll on-time",
+      target: "100% on bi-weekly schedule",
+      current: 1,
+      errorBudgetRemaining: 1,
+    },
+    {
+      id: "slo-fin-report",
+      processId: "fin-report",
+      name: "Financial reporting",
+      target: "Day 5 close",
+      current: 1,
+      errorBudgetRemaining: 1,
+    },
   ],
 };
+
+export { DEMO_NOW };

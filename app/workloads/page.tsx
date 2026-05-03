@@ -8,7 +8,7 @@ import { HealthPill, Pill } from "@/components/primitives/Pill";
 import { WORKLOAD_LIST } from "@/data/workloads";
 import { getScenarioState } from "@/data/scenarios";
 import { useWvi } from "@/store/useWvi";
-import { rollupHealth, processesAtRisk } from "@/lib/health";
+import { workloadOverallHealth, processesAtRisk } from "@/lib/health";
 import { formatUsd } from "@/lib/format";
 
 export default function WorkloadsListPage() {
@@ -52,7 +52,7 @@ export default function WorkloadsListPage() {
             <tbody>
               {WORKLOAD_LIST.map((w) => {
                 const state = getScenarioState(w.id, stepId);
-                const health = rollupHealth(w, state);
+                const health = workloadOverallHealth(w, state.signals);
                 const par = processesAtRisk(w, state);
                 return (
                   <tr

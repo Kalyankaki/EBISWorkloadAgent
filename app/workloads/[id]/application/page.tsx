@@ -13,7 +13,7 @@ import { getScenarioState } from "@/data/scenarios";
 export default function ApplicationIQPage() {
   const stepId = useWvi((s) => s.stepId);
   const workloadId = useWvi((s) => s.currentWorkloadId);
-  const workload = getWorkload(workloadId);
+  const workload = getWorkload(workloadId)!;
   const state = getScenarioState(workloadId, stepId);
 
   const [openId, setOpenId] = useState<string | null>(null);
