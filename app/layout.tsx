@@ -5,9 +5,9 @@ import { LeftRail } from "@/components/shell/LeftRail";
 import { CopilotPanel } from "@/components/copilot/CopilotPanel";
 
 export const metadata: Metadata = {
-  title: "Workload Virtual Index — Microsoft Azure",
+  title: "Workload Virtual Instance — Microsoft Azure",
   description:
-    "Workload Virtual Index: bind business processes, applications, and Azure infrastructure into a single graph.",
+    "Workload Virtual Instance: bind business processes, applications, and Azure infrastructure into a single graph.",
 };
 
 export default function RootLayout({

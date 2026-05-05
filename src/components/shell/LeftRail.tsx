@@ -13,6 +13,7 @@ import {
   ChevronLeft,
   ChevronRight,
   PlusSquare,
+  Megaphone,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -20,27 +21,18 @@ import { useState } from "react";
 import { ax } from "@/theme/tokens";
 
 const ITEMS = [
-  { icon: PlusSquare, label: "Create a resource", href: "/", active: false },
-  { icon: Home, label: "Home", href: "/", active: false },
-  { icon: Star, label: "Favorites", href: "/", active: false },
-  {
-    icon: Layers,
-    label: "Workload Virtual Index",
-    href: "/workloads",
-    active: true,
-  },
-  { icon: Server, label: "All resources", href: "/", active: false },
-  { icon: Database, label: "Oracle DB@Azure", href: "/", active: false },
-  { icon: Server, label: "Virtual machines", href: "/", active: false },
-  { icon: Network, label: "Networking", href: "/", active: false },
-  {
-    icon: ShieldCheck,
-    label: "Microsoft Defender for Cloud",
-    href: "/",
-    active: false,
-  },
-  { icon: DollarSign, label: "Cost Management", href: "/", active: false },
-  { icon: Activity, label: "Monitor", href: "/", active: false },
+  { icon: PlusSquare, label: "Create a resource", href: "/" },
+  { icon: Home, label: "Home", href: "/" },
+  { icon: Star, label: "Favorites", href: "/" },
+  { icon: Layers, label: "Workload Virtual Instance", href: "/workloads" },
+  { icon: Megaphone, label: "Exec overview & pitch", href: "/pitch" },
+  { icon: Server, label: "All resources", href: "/" },
+  { icon: Database, label: "Oracle DB@Azure", href: "/" },
+  { icon: Server, label: "Virtual machines", href: "/" },
+  { icon: Network, label: "Networking", href: "/" },
+  { icon: ShieldCheck, label: "Microsoft Defender for Cloud", href: "/" },
+  { icon: DollarSign, label: "Cost Management", href: "/" },
+  { icon: Activity, label: "Monitor", href: "/" },
 ];
 
 export function LeftRail() {
@@ -70,7 +62,9 @@ export function LeftRail() {
           const active =
             it.href === "/workloads"
               ? pathname.startsWith("/workloads")
-              : pathname === it.href && it.active;
+              : it.href === "/pitch"
+              ? pathname.startsWith("/pitch")
+              : pathname === it.href;
           return (
             <Link
               key={i}

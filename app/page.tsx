@@ -8,7 +8,7 @@ export default function HomePage() {
   return (
     <div className="px-5 pt-5 pb-12 max-w-[1400px]">
       <div className="text-[22px] font-light text-ax-text mb-1">
-        Workload Virtual Index
+        Workload Virtual Instance
       </div>
       <div className="text-[12px] text-ax-textMute mb-5">
         Bind business processes, applications, and Azure infrastructure into a

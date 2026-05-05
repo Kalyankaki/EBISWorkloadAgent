@@ -1,12 +1,12 @@
-# Workload Virtual Index — Master Build Prompt
+# Workload Virtual Instance — Master Build Prompt
 
-> **For Claude Code.** This document is the master spec for building the Workload Virtual Index (WVI) demo experience for Azure portal. It is meant to be pasted into Claude Code as the source of truth, then executed phase by phase.
+> **For Claude Code.** This document is the master spec for building the Workload Virtual Instance (WVI) demo experience for Azure portal. It is meant to be pasted into Claude Code as the source of truth, then executed phase by phase.
 
 ---
 
 ## 1. Mission
 
-Build a working demo of **Workload Virtual Index** — a new Azure portal experience that lets a customer declare a workload (Oracle EBS in this demo), bind it to a canonical model of business processes + reference infrastructure, and surfaces a single graph that propagates infrastructure signals up to business-process impact, surfaced differently for each persona.
+Build a working demo of **Workload Virtual Instance** — a new Azure portal experience that lets a customer declare a workload (Oracle EBS in this demo), bind it to a canonical model of business processes + reference infrastructure, and surfaces a single graph that propagates infrastructure signals up to business-process impact, surfaced differently for each persona.
 
 The demo must:
 1. Look indistinguishable from real Azure portal chrome (Segoe UI, dark theme by default, blade pattern, command bar, breadcrumb, left rail).

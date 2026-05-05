@@ -23,7 +23,7 @@ export default function WorkloadLayout({
       <Breadcrumb
         items={[
           { label: "Home", href: "/" },
-          { label: "Workload Virtual Index", href: "/workloads" },
+          { label: "Workload Virtual Instance", href: "/workloads" },
           { label: workload.name },
         ]}
       />

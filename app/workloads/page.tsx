@@ -16,7 +16,7 @@ export default function WorkloadsListPage() {
 
   return (
     <div>
-      <Breadcrumb items={[{ label: "Home", href: "/" }, { label: "Workload Virtual Index" }]} />
+      <Breadcrumb items={[{ label: "Home", href: "/" }, { label: "Workload Virtual Instance" }]} />
 
       <div className="px-5 pt-3 pb-3 flex items-center justify-between">
         <div>
